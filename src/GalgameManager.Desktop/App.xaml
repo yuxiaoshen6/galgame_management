@@ -1,0 +1,13 @@
+<Application x:Class="GalgameManager.Desktop.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:GalgameManager.Desktop">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <local:CoverSourceConverter x:Key="CoverImage"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

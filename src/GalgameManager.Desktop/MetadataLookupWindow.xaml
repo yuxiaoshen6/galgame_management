@@ -1,0 +1,78 @@
+<Window x:Class="GalgameManager.Desktop.MetadataLookupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="联网查找封面和简介" Width="850" Height="600" MinWidth="700" MinHeight="480"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource Canvas}" Foreground="{StaticResource Ink}"
+        FontFamily="Segoe UI, Microsoft YaHei UI, Yu Gothic UI" FontSize="14">
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DockPanel>
+            <Button x:Name="SearchButton" DockPanel.Dock="Right" Content="搜索" Style="{StaticResource Primary}"
+                    IsDefault="True" Click="Search" Margin="8,0,0,0"/>
+            <ComboBox x:Name="SourceBox" DockPanel.Dock="Left" Width="132" SelectedIndex="0" Margin="0,0,8,0"
+                      AutomationProperties.Name="游戏资料来源">
+                <ComboBoxItem Content="Bangumi"/>
+                <ComboBoxItem Content="VNDB"/>
+            </ComboBox>
+            <TextBox x:Name="QueryBox" AutomationProperties.Name="搜索游戏名"/>
+        </DockPanel>
+        <TextBlock x:Name="SearchStatus" Grid.Row="1" Margin="0,10,0,12" Style="{StaticResource Quiet}"
+                   TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
+            <ListBox x:Name="Results" SelectionChanged="ShowCandidate" AutomationProperties.Name="匹配的游戏作品"
+                     Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" Foreground="{StaticResource Ink}">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Padding" Value="11,8"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding OriginalTitle}" TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Quiet}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OriginalTitle}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding Released}" Style="{StaticResource Quiet}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Border Grid.Column="1" Margin="12,0,0,0" Padding="13" CornerRadius="8"
+                    Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="CandidatePane">
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="16"/>
+                        <Image x:Name="CandidateCover" MaxWidth="170" MaxHeight="210" Stretch="Uniform"
+                               HorizontalAlignment="Left" Margin="0,8,0,5" AutomationProperties.Name="候选游戏封面"/>
+                        <TextBlock x:Name="CoverStatus" Style="{StaticResource Quiet}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                        <TextBlock Text="{Binding Summary, TargetNullValue=暂无简介}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="取消" IsCancel="True" Margin="0,0,8,0"/>
+            <Button x:Name="UseButton" Content="使用此条目" Style="{StaticResource Primary}" IsEnabled="False" Click="Apply"/>
+        </StackPanel>
+    </Grid>
+</Window>

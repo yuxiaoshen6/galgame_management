@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GalgameManager.Application/GalgameManager.Application.csproj" />
+    <Project Path="src/GalgameManager.Desktop/GalgameManager.Desktop.csproj" />
+    <Project Path="src/GalgameManager.Infrastructure/GalgameManager.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GalgameManager.Smoke/GalgameManager.Smoke.csproj" />
+  </Folder>
+</Solution>

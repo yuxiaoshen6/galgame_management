@@ -1,0 +1,570 @@
+<Window x:Class="GalgameManager.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:app="clr-namespace:GalgameManager.Application;assembly=GalgameManager.Application"
+        Title="樱笺 · Galgame 管理器" Icon="Assets/Library.ico" Width="1240" Height="780"
+        MinWidth="850" MinHeight="510" WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Canvas}" Foreground="{StaticResource Ink}"
+        FontFamily="Segoe UI, Microsoft YaHei UI, Yu Gothic UI" FontSize="14" UseLayoutRounding="True"
+        SnapsToDevicePixels="True" Loaded="OnLoaded" Closing="OnClosing" PreviewKeyDown="OnWindowKeyDown">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="34" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <DataTemplate x:Key="GameCard">
+            <Border x:Name="Card" Background="{StaticResource Panel}" CornerRadius="12" BorderBrush="{StaticResource Line}"
+                    BorderThickness="1" Margin="0,0,13,13" ToolTip="{Binding Directory}" MinWidth="150">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="143"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Button Click="OpenDetails" AutomationProperties.Name="{Binding DisplayName, StringFormat=打开游戏详情 · {0}}"
+                            Padding="0" BorderThickness="0" HorizontalContentAlignment="Stretch">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Grid>
+                                    <ContentPresenter/>
+                                    <Border x:Name="Hover" Background="#25EABAD9" CornerRadius="11,11,0,0"
+                                            Opacity="0" IsHitTestVisible="False"/>
+                                </Grid>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Hover" Property="Opacity" Value="1"/></Trigger>
+                                    <Trigger Property="IsPressed" Value="True"><Setter TargetName="Hover" Property="Opacity" Value=".45"/></Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Border x:Name="Cover" CornerRadius="11,11,0,0" Background="{StaticResource PinkCover}">
+                            <Grid ClipToBounds="True">
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Background.ImageSource, ElementName=CardCover}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Ellipse Width="116" Height="116" Margin="0,-22,16,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                             Stroke="#28FCE6FA" StrokeThickness="1"/>
+                                    <Ellipse Width="75" Height="75" Margin="0,14,5,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                             Stroke="#21FCE6FA" StrokeThickness="1"/>
+                                    <TextBlock Text="✦" Foreground="#89FBE3F6" FontSize="17" HorizontalAlignment="Right"
+                                               VerticalAlignment="Top" Margin="0,12,26,0"/>
+                                    <TextBlock Text="{Binding Initial}" FontSize="43" FontWeight="Light" Foreground="#F2E2F3"
+                                               Margin="19,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Border x:Name="CardCover" CornerRadius="11,11,0,0" IsHitTestVisible="False">
+                                    <Border.Background>
+                                        <ImageBrush ImageSource="{Binding CoverPath, Converter={StaticResource CoverImage}}"
+                                                    Stretch="UniformToFill" AlignmentX="Center" AlignmentY="Center"/>
+                                    </Border.Background>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Button>
+                    <Grid Grid.Row="1" Margin="13,9,13,12">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <TextBlock Text="{Binding DisplayName}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Row="1" Text="{Binding SummaryPreview}" Style="{StaticResource Quiet}" Margin="0,5,0,9"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Height="38"/>
+                        <DockPanel Grid.Row="2" LastChildFill="False">
+                            <TextBlock x:Name="State" Text="{Binding Status}" Style="{StaticResource Quiet}"
+                                       ToolTip="{Binding Reason}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <Button DockPanel.Dock="Right" Content="{Binding LaunchLabel}" Style="{StaticResource Primary}"
+                                    IsEnabled="{Binding CanLaunch}" Click="LaunchGame" MinHeight="29" Padding="8,3" FontSize="12"/>
+                            <Button DockPanel.Dock="Right" Content="详情" Style="{StaticResource QuietButton}"
+                                    Click="OpenDetails" MinHeight="29" Padding="6,3" FontSize="12" Margin="0,0,4,0"/>
+                        </DockPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Accent}" Value="1"><Setter TargetName="Cover" Property="Background" Value="{StaticResource BlueCover}"/></DataTrigger>
+                <DataTrigger Binding="{Binding Accent}" Value="2"><Setter TargetName="Cover" Property="Background" Value="{StaticResource GreenCover}"/></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static app:GameState.Ready}"><Setter TargetName="State" Property="Foreground" Value="{StaticResource Mint}"/></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static app:GameState.NeedsSetup}"><Setter TargetName="State" Property="Foreground" Value="{StaticResource Amber}"/></DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="{x:Static app:GameState.Unavailable}"><Setter TargetName="State" Property="Foreground" Value="{StaticResource Error}"/></DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Background="#10111B" BorderBrush="#282939" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" Margin="13,0,0,0">
+                    <Image Source="Assets/Library.ico" Width="17" Height="17" Margin="0,0,8,0"/>
+                    <TextBlock Text="樱笺 · Galgame 管理器" Style="{StaticResource Quiet}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource CaptionButton}" Click="MinimizeWindow" ToolTip="最小化" AutomationProperties.Name="最小化">
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE921;" FontSize="10"/>
+                    </Button>
+                    <Button Style="{StaticResource CaptionButton}" Click="ToggleMaximize" ToolTip="最大化或还原"
+                            AutomationProperties.Name="最大化或还原">
+                        <TextBlock FontSize="10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+                                    <Setter Property="Text" Value="&#xE922;"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                            <Setter Property="Text" Value="&#xE923;"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Button>
+                    <Button Style="{StaticResource CaptionButton}" Click="CloseWindow" ToolTip="关闭" AutomationProperties.Name="关闭">
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE8BB;" FontSize="10"/>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        <Grid Grid.Row="1" x:Name="Workspace" ClipToBounds="True">
+            <Grid x:Name="BasePages">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="196"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="{StaticResource Rail}" BorderBrush="#2B2B3D" BorderThickness="0,0,1,0">
+                    <DockPanel Margin="15,21,15,15">
+                        <StackPanel DockPanel.Dock="Top">
+                            <StackPanel Orientation="Horizontal" Margin="3,1,0,28">
+                                <Image Width="43" Height="43" Source="Assets/Library.ico" Margin="0,0,10,0"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="樱笺" FontSize="23" FontWeight="Bold"/>
+                                    <TextBlock Text="Galgame 管理器" Style="{StaticResource Quiet}" FontSize="11" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <Button Click="ShowLibrary" AutomationProperties.Name="游戏库">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Nav}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding OnLibrary}" Value="True">
+                                            <Setter Property="Background" Value="#382A40"/><Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                            <Setter Property="BorderBrush" Value="#60445E"/>
+                                        </DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8A9;" Margin="0,0,12,0"/><AccessText Text="游戏库"/></StackPanel>
+                            </Button>
+                            <Button Click="ShowRoots" AutomationProperties.Name="扫描目录">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Nav}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding OnRoots}" Value="True">
+                                            <Setter Property="Background" Value="#382A40"/><Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                            <Setter Property="BorderBrush" Value="#60445E"/>
+                                        </DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8B7;" Margin="0,0,12,0"/><AccessText Text="扫描目录"/></StackPanel>
+                            </Button>
+                            <Button Click="ShowPreview" AutomationProperties.Name="导入预览" Visibility="{Binding HasPreview, Converter={StaticResource VisibleIf}}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource Nav}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding OnPreview}" Value="True">
+                                            <Setter Property="Background" Value="#382A40"/><Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                            <Setter Property="BorderBrush" Value="#60445E"/>
+                                        </DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8B5;" Margin="0,0,12,0"/><AccessText Text="导入预览"/></StackPanel>
+                            </Button>
+                            <Border Background="#262637" CornerRadius="9" Padding="10,10" Margin="0,9,0,0"
+                                    Visibility="{Binding IsScanning, Converter={StaticResource VisibleIf}}">
+                                <StackPanel>
+                                    <TextBlock Text="正在扫描" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+                                    <Button Content="{Binding CancelLabel}" Click="CancelScan" IsEnabled="{Binding CanCancelScan}"
+                                            Margin="0,8,0,0" MinHeight="32" FontSize="12"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="3,13,3,1">
+                            <DockPanel LastChildFill="False">
+                                <Ellipse Fill="{StaticResource Mint}" Width="6" Height="6" Margin="0,0,7,0"/>
+                                <TextBlock Text="本地游戏库" Style="{StaticResource Quiet}"/>
+                                <TextBlock Text="v0.2.1" DockPanel.Dock="Right" Style="{StaticResource Quiet}"/>
+                            </DockPanel>
+                        </Border>
+                        <Grid/>
+                    </DockPanel>
+                </Border>
+                <Grid Grid.Column="1" x:Name="PageFrame" Margin="25,21,24,0" SizeChanged="OnPageSizeChanged">
+                    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid x:Name="LibraryPage" Visibility="{Binding OnLibrary, Converter={StaticResource VisibleIf}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Background="{StaticResource StationBrush}" CornerRadius="15" BorderBrush="#4A3850" BorderThickness="1">
+                            <Border x:Name="LibraryBanner" Background="{StaticResource BannerShade}" CornerRadius="14" Height="183">
+                                <StackPanel VerticalAlignment="Center" Margin="23,0">
+                                    <TextBlock Text="游戏库" FontFamily="Microsoft YaHei UI" FontSize="36" FontWeight="Bold"/>
+                                    <TextBlock Text="搜索和启动本机的 Galgame" Foreground="#E1CBE0" FontSize="14" Margin="0,6,0,13"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Click="AddRoots" Style="{StaticResource Primary}" IsEnabled="{Binding IsAvailable}" Margin="0,0,9,0"
+                                                AutomationProperties.Name="添加扫描目录">
+                                            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE710;" Margin="0,0,7,0"/><AccessText Text="添加扫描目录"/></StackPanel>
+                                        </Button>
+                                        <Button Content="手动添加" Click="AddGame" IsEnabled="{Binding IsAvailable}" Background="#C6252032"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Border>
+                        <Grid Grid.Row="1" Margin="0,19,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="我的收藏" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ResultCount}" Style="{StaticResource Quiet}" Margin="11,3,10,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Grid Grid.Column="1" Width="248" HorizontalAlignment="Right">
+                                <TextBox x:Name="SearchBox" Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Padding="35,5,29,5"
+                                         AutomationProperties.Name="搜索游戏名称"/>
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE721;" Foreground="{StaticResource Muted}" IsHitTestVisible="False"
+                                           VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                <TextBlock Text="搜索游戏名称" Margin="35,0,29,0" IsHitTestVisible="False" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Quiet}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers><DataTrigger Binding="{Binding Keyword}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Button Content="×" Click="ClearSearch" AutomationProperties.Name="清空搜索" Padding="4,1" MinHeight="24"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="17">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource QuietButton}">
+                                            <Style.Triggers><DataTrigger Binding="{Binding Keyword}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                            <Button Grid.Column="2" x:Name="ReloadButton" Click="RefreshLibrary" Margin="8,0,0,0" Padding="10,4"
+                                    AutomationProperties.Name="刷新游戏库" ToolTip="刷新游戏库与路径状态">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsBusy}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE72C;"/>
+                            </Button>
+                        </Grid>
+                        <ListBox Grid.Row="2" x:Name="GameList" Style="{StaticResource VirtualList}" ItemsSource="{Binding Rows}"
+                                 Focusable="False" AutomationProperties.Name="游戏卡片">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <ItemsControl ItemsSource="{Binding}" ItemTemplate="{StaticResource GameCard}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Rows="1" Columns="{Binding DataContext.Columns, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Border Grid.Row="2" Background="#191A2A" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="12"
+                                Visibility="{Binding LibraryEmpty, Converter={StaticResource VisibleIf}}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12">
+                                <Border Width="49" Height="43" CornerRadius="12" Background="#382C43" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}"
+                                               FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="收藏架还是空的" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,9,0,4"/>
+                                <TextBlock Text="选择存放游戏的文件夹，扫描后可逐项确认导入。" Style="{StaticResource Quiet}"
+                                           TextAlignment="Center" TextWrapping="Wrap"/>
+                                <Button Content="选择游戏文件夹" Click="AddRoots" IsEnabled="{Binding IsAvailable}"
+                                        HorizontalAlignment="Center" Margin="0,9,0,0" MinHeight="31" Padding="9,4" FontSize="12"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Row="2" Background="{StaticResource Panel}" CornerRadius="12"
+                                Visibility="{Binding NoMatches, Converter={StaticResource VisibleIf}}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="未找到匹配的游戏" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <Button Content="清空搜索" Click="ClearSearch" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid x:Name="RootsPage" Visibility="{Binding OnRoots, Converter={StaticResource VisibleIf}}">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <Grid Margin="0,4,0,18">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="扫描目录" Style="{StaticResource Headline}"/>
+                                <TextBlock Text="管理游戏文件夹，选择要扫描的位置。" Style="{StaticResource Quiet}" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="添加扫描目录" Click="AddRoots" IsEnabled="{Binding IsAvailable}" Margin="0,0,8,0"/>
+                                <Button Content="扫描全部" Click="ScanAll" Style="{StaticResource Primary}" IsEnabled="{Binding CanScan}"/>
+                            </StackPanel>
+                        </Grid>
+                        <Border Grid.Row="1" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                CornerRadius="11" Padding="14" Margin="0,0,0,12" Visibility="{Binding IsScanning, Converter={StaticResource VisibleIf}}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <Button DockPanel.Dock="Right" Click="CancelScan" Content="{Binding CancelLabel}" MinHeight="30" IsEnabled="{Binding CanCancelScan}"/>
+                                    <TextBlock Text="{Binding ScanCounts}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <TextBlock Text="{Binding CurrentDirectory}" Style="{StaticResource Quiet}" TextTrimming="CharacterEllipsis" Margin="0,6,0,8"/>
+                                <ProgressBar x:Name="ScanProgressBar" Height="4" Foreground="{StaticResource Accent}" Background="{StaticResource Field}"
+                                             IsIndeterminate="{Binding IsScanning}"/>
+                            </StackPanel>
+                        </Border>
+                        <ListBox Grid.Row="2" ItemsSource="{Binding Roots}" Style="{StaticResource VirtualList}" Focusable="False"
+                                 AutomationProperties.Name="已保存的扫描目录">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="14,11" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                            CornerRadius="10" Margin="0,0,9,9">
+                                        <DockPanel LastChildFill="True">
+                                            <Button DockPanel.Dock="Right" Content="移除" Click="RemoveRoot" Style="{StaticResource QuietButton}"
+                                                    IsEnabled="{Binding DataContext.IsAvailable, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            <Button DockPanel.Dock="Right" Content="扫描此目录" Click="ScanOne" Margin="9,0,2,0"
+                                                    IsEnabled="{Binding DataContext.CanScan, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            <TextBlock DockPanel.Dock="Left" Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}"
+                                                       VerticalAlignment="Center" FontSize="17" Margin="0,0,12,0"/>
+                                            <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Border Grid.Row="2" BorderBrush="{StaticResource Line}" BorderThickness="1" Background="#191A2A" CornerRadius="12"
+                                Visibility="{Binding NoRoots, Converter={StaticResource VisibleIf}}">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Text="还没有扫描目录" FontWeight="SemiBold" FontSize="17" HorizontalAlignment="Center"/>
+                                <Button Content="选择文件夹" Click="AddRoots" Style="{StaticResource Primary}" IsEnabled="{Binding IsAvailable}"
+                                        HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid x:Name="PreviewPage" Visibility="{Binding OnPreview, Converter={StaticResource VisibleIf}}">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <StackPanel Margin="0,4,0,15">
+                            <TextBlock Text="导入预览" Style="{StaticResource Headline}"/>
+                            <TextBlock Text="{Binding ScanSummary}" Style="{StaticResource Quiet}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <Expander Grid.Row="1" Header="查看扫描中的问题" Foreground="{StaticResource Amber}" Margin="0,0,0,10"
+                                  Visibility="{Binding HasIssues, Converter={StaticResource VisibleIf}}">
+                            <ListBox ItemsSource="{Binding Issues}" MaxHeight="103" Style="{StaticResource VirtualList}" Margin="3,6,0,0">
+                                <ListBox.ItemTemplate><DataTemplate>
+                                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,2,6,3">
+                                        <Run Text="{Binding Path, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Reason, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </DataTemplate></ListBox.ItemTemplate>
+                            </ListBox>
+                        </Expander>
+                        <ListBox Grid.Row="2" ItemsSource="{Binding Preview}" Style="{StaticResource VirtualList}" Focusable="False"
+                                 IsEnabled="{Binding IsAvailable}" AutomationProperties.Name="候选游戏">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                            CornerRadius="10" Padding="12" Margin="0,0,9,9">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" IsEnabled="{Binding IsNew}" Margin="0,0,11,0"
+                                                      VerticalAlignment="Center" AutomationProperties.Name="{Binding Candidate.DisplayName, StringFormat=选择导入 · {0}}"/>
+                                            <DockPanel Grid.Column="1" Margin="0,0,12,0">
+                                                <Image DockPanel.Dock="Left" Width="48" MaxHeight="69" Stretch="Uniform" Margin="0,0,9,0"
+                                                       Source="{Binding Metadata.CoverPath, Converter={StaticResource CoverImage}, ConverterParameter=120}"
+                                                       Visibility="{Binding Metadata.HasCover, Converter={StaticResource VisibleIf}}"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Candidate.DisplayName}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Candidate.InstallDirectory}" Style="{StaticResource Quiet}" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Candidate.InstallDirectory}" Margin="0,4,0,0"/>
+                                                    <TextBlock Text="{Binding SummaryPreview}" Style="{StaticResource Quiet}" TextWrapping="Wrap"
+                                                               TextTrimming="CharacterEllipsis" MaxHeight="38" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <ComboBox ItemsSource="{Binding Entries}" SelectedItem="{Binding Entry, Mode=TwoWay}"
+                                                          IsEnabled="{Binding IsNew}" AutomationProperties.Name="选择候选启动入口" ToolTip="{Binding Entry.Entry.Path}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate><TextBlock Text="{Binding Caption}" TextTrimming="CharacterEllipsis"/></DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <TextBlock Text="{Binding Guidance}" Style="{StaticResource Quiet}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                                <Button Content="{Binding LookupLabel}" Click="LookupPreviewMetadata"
+                                                        Visibility="{Binding CanLookupMetadata, Converter={StaticResource VisibleIf}}"
+                                                        HorizontalAlignment="Left" MinHeight="29" FontSize="12" Padding="8,3" Margin="0,6,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Border Grid.Row="2" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="11" Background="#191A2A">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers><DataTrigger Binding="{Binding HasCandidates}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ScanSummary}" Style="{StaticResource Quiet}" TextWrapping="Wrap" TextAlignment="Center" Margin="12,0"/>
+                                <Button Content="手动添加游戏" Click="AddGame" IsEnabled="{Binding IsAvailable}" Margin="0,11,0,0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <DockPanel Grid.Row="3" LastChildFill="False" Margin="0,9,0,6" IsEnabled="{Binding IsAvailable}">
+                            <Button Content="选择全部新游戏" Click="SelectAllPreview" Margin="0,0,7,0"
+                                    Visibility="{Binding HasCandidates, Converter={StaticResource VisibleIf}}"/>
+                            <Button Content="取消勾选" Click="ClearPreviewSelection" Style="{StaticResource QuietButton}"
+                                    Visibility="{Binding HasCandidates, Converter={StaticResource VisibleIf}}"/>
+                            <Button DockPanel.Dock="Right" Content="{Binding ImportLabel}" Click="ConfirmImport" Style="{StaticResource Primary}" IsEnabled="{Binding CanImport}"/>
+                            <Button DockPanel.Dock="Right" Content="放弃预览" Click="DiscardPreview" Margin="0,0,7,0"/>
+                        </DockPanel>
+                    </Grid>
+                    <Border Grid.Row="1" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="0,9,0,10" Margin="0,9,0,0">
+                        <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Quiet}">
+                                    <Style.Triggers><DataTrigger Binding="{Binding HasError}" Value="True"><Setter Property="Foreground" Value="{StaticResource Error}"/></DataTrigger></Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                </Grid>
+            </Grid>
+            <Grid x:Name="DetailLayer" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle">
+                <Border x:Name="DetailVeil" Background="#C9101019"/>
+                <Border x:Name="DetailSurface" Background="{StaticResource Canvas}" ClipToBounds="True">
+                    <Border.RenderTransform>
+                        <TransformGroup><ScaleTransform x:Name="DetailScale"/><TranslateTransform x:Name="DetailOffset"/></TransformGroup>
+                    </Border.RenderTransform>
+                    <Grid>
+                    <Border x:Name="DetailCover" Opacity="0" IsHitTestVisible="False"/>
+                    <Grid x:Name="DetailBody">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <Border>
+                            <Border.Background>
+                                <ImageBrush ImageSource="{StaticResource StationArt}" Stretch="UniformToFill" Viewport=".37,0,.63,1"/>
+                            </Border.Background>
+                            <Border Background="{StaticResource BannerShade}" Padding="30,16,30,19">
+                                <DockPanel LastChildFill="True">
+                                    <Button x:Name="DetailBack" DockPanel.Dock="Right" Content="←  返回" Click="CancelEditor"
+                                            VerticalAlignment="Top" AutomationProperties.Name="返回并取消编辑"/>
+                                    <StackPanel Margin="0,0,15,0">
+                                        <TextBlock Text="{Binding Editor.Heading}" Foreground="{StaticResource Accent}" FontSize="12"/>
+                                        <TextBlock Text="{Binding Editor.Title}" FontSize="26" FontWeight="Bold" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </Border>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="EditorScroll">
+                            <StackPanel Margin="30,17,30,15" MaxWidth="980" DataContext="{Binding Editor}">
+                                <Grid Margin="0,0,0,19">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Margin="0,0,16,0" MinHeight="186" Background="{StaticResource Panel}"
+                                            BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8">
+                                        <Grid>
+                                            <TextBlock Text="暂无封面" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Quiet}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Source, ElementName=DetailArtwork}" Value="{x:Null}">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <Image x:Name="DetailArtwork" Source="{Binding CoverPath, Converter={StaticResource CoverImage}, ConverterParameter=900}"
+                                                   Stretch="Uniform" MaxHeight="280" AutomationProperties.Name="游戏封面"/>
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <DockPanel LastChildFill="True" Margin="0,0,0,6">
+                                            <Button DockPanel.Dock="Right" Content="联网查找封面和简介" Click="LookupEditorMetadata"
+                                                    Margin="6,0,0,0" MinHeight="30" FontSize="12" Padding="7,3"
+                                                    Visibility="{Binding NeedsMetadata, Converter={StaticResource VisibleIf}}"
+                                                    IsEnabled="{Binding DataContext.IsAvailable, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            <Button DockPanel.Dock="Right" Content="选择封面" Click="ChooseCover" MinHeight="30" FontSize="12" Padding="7,3"/>
+                                            <TextBlock Text="游戏简介" Style="{StaticResource FieldLabel}" Margin="0" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <TextBox Text="{Binding Summary, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="完整游戏简介"
+                                                 TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top" MinHeight="145"
+                                                 MaxHeight="400" VerticalScrollBarVisibility="Auto"/>
+                                        <TextBlock Text="{Binding MetadataSource}" Style="{StaticResource Quiet}" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding Original.Reason}" TextWrapping="Wrap" Foreground="{StaticResource Amber}" Margin="0,0,0,10">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Original.Reason}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="显示名称" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="GameNameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="显示名称"
+                                         Margin="0,0,0,14"/>
+                                <TextBlock Text="安装目录" Style="{StaticResource FieldLabel}"/>
+                                <DockPanel Margin="0,0,0,14">
+                                    <Button DockPanel.Dock="Right" Content="重新定位" Click="RelocateGame" Margin="8,0,0,0"/>
+                                    <TextBox Text="{Binding Directory, Mode=OneWay}" IsReadOnly="True" AutomationProperties.Name="安装目录"/>
+                                </DockPanel>
+                                <TextBlock Text="启动入口" Style="{StaticResource FieldLabel}"/>
+                                <DockPanel Margin="0,0,0,14">
+                                    <Button DockPanel.Dock="Right" Content="选择文件" Click="ChooseEntry" Margin="8,0,0,0"/>
+                                    <TextBox Text="{Binding Executable, Mode=OneWay, TargetNullValue='待配置 · 请选择 .exe 文件'}"
+                                             IsReadOnly="True" AutomationProperties.Name="启动入口"/>
+                                </DockPanel>
+                                <TextBlock Text="工作目录" Style="{StaticResource FieldLabel}"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="恢复默认" Click="DefaultWorkDirectory" Margin="8,0,0,0"/>
+                                    <Button DockPanel.Dock="Right" Content="选择目录" Click="ChooseWorkDirectory" Margin="8,0,0,0"/>
+                                    <TextBox Text="{Binding WorkDirectory, Mode=OneWay, TargetNullValue='默认 · 使用启动入口所在目录'}"
+                                             IsReadOnly="True" AutomationProperties.Name="工作目录"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,7,0,0" Visibility="{Binding NeedsWorkDirectoryConfirmation, Converter={StaticResource VisibleIf}}">
+                                    <Button DockPanel.Dock="Right" Content="继续使用当前目录" Click="KeepWorkDirectory"/>
+                                    <TextBlock Text="已重新定位，请确认自定义工作目录仍然适用。" TextWrapping="Wrap"
+                                               Foreground="{StaticResource Amber}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,15,0,7">
+                                    <Button DockPanel.Dock="Right" Content="+ 添加一项" Click="AddArgument" Padding="10,5" MinHeight="32"/>
+                                    <StackPanel>
+                                        <TextBlock Text="启动参数" Style="{StaticResource FieldLabel}" Margin="0,0,0,3"/>
+                                        <TextBlock Text="每行作为一个参数传给游戏，空行代表一个空字符串参数。" Style="{StaticResource Quiet}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Arguments}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,0,0,6">
+                                                <Button DockPanel.Dock="Right" Content="移除" Click="RemoveArgument" Margin="5,0,0,0" Padding="8,3"/>
+                                                <Button DockPanel.Dock="Right" Content="↓" Click="MoveArgumentDown" AutomationProperties.Name="下移参数" Margin="5,0,0,0" Padding="8,3"/>
+                                                <Button DockPanel.Dock="Right" Content="↑" Click="MoveArgumentUp" AutomationProperties.Name="上移参数" Margin="5,0,0,0" Padding="8,3"/>
+                                                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="启动参数"/>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                        <Border Grid.Row="2" Background="{StaticResource Rail}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="30,10">
+                            <DockPanel MaxWidth="980">
+                                <Button DockPanel.Dock="Right" Content="保存配置" Click="SaveEditor" Style="{StaticResource Primary}" IsEnabled="{Binding IsAvailable}"/>
+                                <Button DockPanel.Dock="Right" Content="取消" Click="CancelEditor" Margin="0,0,9,0" IsEnabled="{Binding IsAvailable}"/>
+                                <Button DockPanel.Dock="Left" Content="从库中移除" Click="RemoveGame" Margin="0,0,12,0"
+                                        Foreground="{StaticResource Error}" IsEnabled="{Binding IsAvailable}"
+                                        Visibility="{Binding Editor.IsExisting, FallbackValue=Collapsed, Converter={StaticResource VisibleIf}}"/>
+                                <TextBlock Text="{Binding Editor.Error}" TextWrapping="Wrap" Foreground="{StaticResource Error}" VerticalAlignment="Center"
+                                           AutomationProperties.LiveSetting="Assertive" Margin="0,0,12,0"/>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
