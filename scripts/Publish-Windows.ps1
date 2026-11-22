@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([string]$CommunitySettings)
 
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path -Parent $PSScriptRoot
@@ -16,6 +16,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish exited with code $LASTEXITCODE." }
     Copy-Item -LiteralPath (Join-Path $repository 'README.md'), (Join-Path $repository 'CHANGELOG.md') -Destination $staging
     Copy-Item -LiteralPath (Join-Path $repository 'docs') -Destination $staging -Recurse
+    if ($CommunitySettings) {
+        Copy-Item -LiteralPath $CommunitySettings -Destination (Join-Path $staging 'community.json')
+    }
     $temporaryArchive = Join-Path $artifacts ('.archive-' + [guid]::NewGuid().ToString('N') + '.zip')
     Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $temporaryArchive -CompressionLevel Optimal
     Move-Item -LiteralPath $temporaryArchive -Destination $archive -Force

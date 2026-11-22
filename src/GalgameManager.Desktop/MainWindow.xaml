@@ -171,6 +171,9 @@
                                 </Button.Style>
                                 <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8B5;" Margin="0,0,12,0"/><AccessText Text="导入预览"/></StackPanel>
                             </Button>
+                            <Button Click="ShowForum" Style="{StaticResource Nav}" AutomationProperties.Name="论坛">
+                                <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Icon}" Text="&#xE8BD;" Margin="0,0,12,0"/><AccessText Text="论坛"/></StackPanel>
+                            </Button>
                             <Border Background="#262637" CornerRadius="9" Padding="10,10" Margin="0,9,0,0"
                                     Visibility="{Binding IsScanning, Converter={StaticResource VisibleIf}}">
                                 <StackPanel>
@@ -181,11 +184,16 @@
                             </Border>
                         </StackPanel>
                         <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="3,13,3,1">
-                            <DockPanel LastChildFill="False">
-                                <Ellipse Fill="{StaticResource Mint}" Width="6" Height="6" Margin="0,0,7,0"/>
-                                <TextBlock Text="本地游戏库" Style="{StaticResource Quiet}"/>
-                                <TextBlock Text="v0.2.1" DockPanel.Dock="Right" Style="{StaticResource Quiet}"/>
-                            </DockPanel>
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="v0.3.0" DockPanel.Dock="Right" Style="{StaticResource Quiet}" Margin="5,0,0,0"/>
+                                    <TextBlock x:Name="AccountLabel" Text="游客" Style="{StaticResource Quiet}" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                                    <Button x:Name="AccountButton" Content="登录" Click="LoginOrLogout" Padding="7,3" MinHeight="28" Margin="0,0,6,0"/>
+                                    <Button x:Name="RegisterButton" Content="注册" Click="RegisterAccount" Padding="7,3" MinHeight="28"/>
+                                </StackPanel>
+                            </StackPanel>
                         </Border>
                         <Grid/>
                     </DockPanel>

@@ -17,19 +17,23 @@ public partial class MainWindow : Window
     private readonly MainViewModel model;
     private readonly MetadataFiles metadataFiles;
     private readonly MetadataCatalog catalog;
+    private readonly CommunityClient community;
+    private ForumWindow? forum;
     private FrameworkElement? originCard;
     private Rect? openingRect;
     private IInputElement? returnFocus;
     private bool transitioning;
 
-    public MainWindow(MainViewModel model, MetadataFiles metadataFiles, MetadataCatalog catalog)
+    public MainWindow(MainViewModel model, MetadataFiles metadataFiles, MetadataCatalog catalog, CommunityClient community)
     {
         this.model = model;
         this.metadataFiles = metadataFiles;
         this.catalog = catalog;
+        this.community = community;
         InitializeComponent();
         DataContext = model;
         model.PropertyChanged += OnModelChange;
+        community.AccountChanged += UpdateAccount;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e) => await model.InitializeOrRefreshAsync();
@@ -38,6 +42,7 @@ public partial class MainWindow : Window
     {
         model.Stop();
         model.PropertyChanged -= OnModelChange;
+        community.AccountChanged -= UpdateAccount;
     }
 
     private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)
@@ -87,6 +92,51 @@ public partial class MainWindow : Window
     private void ShowRoots(object sender, RoutedEventArgs e) => model.Page = Page.Roots;
     private void ShowPreview(object sender, RoutedEventArgs e) => model.Page = Page.Preview;
     private async void RefreshLibrary(object sender, RoutedEventArgs e) => await model.InitializeOrRefreshAsync();
+
+    private void ShowForum(object sender, RoutedEventArgs e)
+    {
+        if (community.Account is null && !ShowAccount(register: false))
+            return;
+        if (forum is not null)
+        {
+            if (forum.WindowState == WindowState.Minimized)
+                forum.WindowState = WindowState.Normal;
+            forum.Activate();
+            return;
+        }
+        forum = new ForumWindow(community) { Owner = this };
+        forum.Closed += (_, _) => forum = null;
+        forum.Show();
+    }
+
+    private async void LoginOrLogout(object sender, RoutedEventArgs e)
+    {
+        if (community.Account is null)
+        {
+            ShowAccount(register: false);
+            return;
+        }
+        try { await community.SignOutAsync(); }
+        catch (CommunityException ex)
+        {
+            MessageBox.Show(this, ex.Message, "论坛账号", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void RegisterAccount(object sender, RoutedEventArgs e) => ShowAccount(register: true);
+
+    private bool ShowAccount(bool register) =>
+        new AccountWindow(community, register) { Owner = this }.ShowDialog() == true;
+
+    private void UpdateAccount()
+    {
+        var account = community.Account;
+        AccountLabel.Text = account?.Nickname ?? "游客";
+        AccountButton.Content = account is null ? "登录" : "退出登录";
+        RegisterButton.Visibility = account is null ? Visibility.Visible : Visibility.Collapsed;
+        if (account is null)
+            forum?.Close();
+    }
 
     private void ClearSearch(object sender, RoutedEventArgs e)
     {

@@ -12,6 +12,7 @@ public partial class App : System.Windows.Application
 {
     private Mutex? mutex;
     private bool ownsMutex;
+    private CommunityClient? community;
     private readonly HttpClient metadataHttp = new(new HttpClientHandler { AllowAutoRedirect = false });
 
     protected override void OnStartup(StartupEventArgs e)
@@ -50,11 +51,12 @@ public partial class App : System.Windows.Application
         var log = new DiagnosticLog(directory);
         var store = new SqliteLibrary(Path.Combine(directory, "library.db"), log);
         var files = new MetadataFiles(directory);
-        metadataHttp.DefaultRequestHeaders.UserAgent.ParseAdd("GalgameManager/0.2.1 (Windows desktop)");
+        metadataHttp.DefaultRequestHeaders.UserAgent.ParseAdd("GalgameManager/0.3.0 (Windows desktop)");
         var catalog = new MetadataCatalog(metadataHttp, files);
         var service = new LibraryService(store, store, new FileScanner(log), new WindowsGameLauncher(log), files);
         var viewModel = new MainViewModel(service, store.Initialize);
-        var window = new MainWindow(viewModel, files, catalog);
+        community = CommunityConnection.Open();
+        var window = new MainWindow(viewModel, files, catalog, community);
         MainWindow = window;
         window.Show();
     }
@@ -65,6 +67,7 @@ public partial class App : System.Windows.Application
             mutex?.ReleaseMutex();
         mutex?.Dispose();
         metadataHttp.Dispose();
+        community?.Dispose();
         base.OnExit(e);
     }
 }
